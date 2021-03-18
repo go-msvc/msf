@@ -20,6 +20,14 @@ type IDatabase interface {
 	AddTable(mi model.IItem) (ITable, error)
 }
 
+func MustAddTable(db IDatabase, mi model.IItem) ITable {
+	table, err := db.AddTable(mi)
+	if err != nil {
+		panic(err)
+	}
+	return table
+}
+
 //table storing one type of item
 type ITable interface {
 	Model() model.IItem

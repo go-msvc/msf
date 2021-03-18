@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/go-msvc/msf/model"
+	"github.com/go-msvc/msf/db"
 	"github.com/go-msvc/msf/mux"
 	"github.com/go-msvc/msf/service"
 )
 
-func New(model model.IItem) mux.IMux {
-	mux := mux.New(listHandler(model))
-	mux.Add("{id}", itemHandler(model))
+func New(table db.ITable) mux.IMux {
+	mux := mux.New(listHandler(table))
+	mux.Add("{id}", itemHandler(table))
 	return mux
 }
 
-func listHandler(model model.IItem) interface{} {
+func listHandler(table db.ITable) interface{} {
 	return func(ctx service.IContext, muxData map[string]interface{}) (interface{}, error) {
-		fmt.Printf("CRUD(%s).LIST %+v\n", model.Name(), muxData)
+		fmt.Printf("CRUD(%s).LIST %+v\n", table.Name(), muxData)
 
 		//get list of items
-		limit := int(paramIntWithDefault(muxData, "limit", 10, 1, 10000))
+		limit := paramIntWithDefault(muxData, "limit", 10, 1, 10000)
 		key := map[string]interface{}{}
 		for n, v := range muxData {
 			if n == "limit" {
@@ -28,9 +28,9 @@ func listHandler(model model.IItem) interface{} {
 			}
 			key[n] = v
 		}
-		itemList, err := model.GetList(key, limit)
+		itemList, err := table.GetByKey(key, limit)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get %s: %v", model.Name(), err)
+			return nil, fmt.Errorf("failed to get %s: %v", table.Name(), err)
 		}
 		// if len(itemList) == 0 {
 		// 	return nil, fmt.Errorf("not found key:%+v", key)
@@ -39,27 +39,26 @@ func listHandler(model model.IItem) interface{} {
 	}
 }
 
-func itemHandler(model model.IItem) interface{} {
+func itemHandler(table db.ITable) interface{} {
 	return func(ctx service.IContext, muxData map[string]interface{}) (interface{}, error) {
-		fmt.Printf("CRUD(%s).ITEM %+v\n", model.Name(), muxData)
+		fmt.Printf("CRUD(%s).ITEM %+v\n", table.Name(), muxData)
 		itemIdStr, ok := muxData["id"].(string)
 		if !ok {
 			return nil, fmt.Errorf("missing id")
 		}
 
-		itemId64, err := strconv.ParseInt(itemIdStr, 10, 64)
+		itemId, err := strconv.ParseInt(itemIdStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("non-integer id \"%v\"", itemIdStr)
 		}
-		itemId := int(itemId64)
 		fmt.Printf("CRUD itemName=%v\n", itemId)
 
 		//todo: http crud method must also be in muxData: GET|DEL|UPD
 
 		//get one item
-		itemData, err := model.GetById(itemId)
+		itemData, err := table.GetById(itemId)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get %s: %v", model.Name(), err)
+			return nil, fmt.Errorf("failed to get %s: %v", table.Name(), err)
 		}
 		return itemData, nil
 	}

@@ -208,6 +208,7 @@ func (t mysqlTable) createTableSQL() string {
 	foreignKeyDefinitions := ""
 	indexDefinitions := ""
 	uniqSets := map[string][]string{} //key is uniq set name configured in a field, value if field names
+	tempItem := reflect.New(t.itemModel.StructType()).Elem().Interface()
 	for i, f := range t.itemModel.Fields() {
 		if i == 0 {
 			continue //skip own id
@@ -219,8 +220,14 @@ func (t mysqlTable) createTableSQL() string {
 			foreignKeyDefinitions += fmt.Sprintf(",FOREIGN KEY(%s) REFERENCES %s(%s)", f.Name, f.RefItem.Name(), f.Name)
 		} else {
 			//store value: e.g. `merchant_reference` VARCHAR(64) NOT NULL,
-			//todo - support more types, range and length constraints etc...
-			fieldDefinitions += fmt.Sprintf(",`%s` VARCHAR(64) NOT NULL", f.Name)
+			switch f.Value(tempItem).(type) {
+			case string:
+				fieldDefinitions += fmt.Sprintf(",`%s` VARCHAR(64) NOT NULL", f.Name) //todo: length & pattern constraints
+			case int, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
+				fieldDefinitions += fmt.Sprintf(",`%s` INT(11) NOT NULL", f.Name)
+			default:
+				panic(db.Errorf(db.ERR_FIELD_TYPE_NOT_SUPPORTED, "%s.field(%s).type=%T not supported", t.itemModel.Name(), f.Name, f.Value(tempItem)))
+			}
 		}
 
 		for _, uniqSetName := range f.UniqSets {

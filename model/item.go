@@ -107,6 +107,7 @@ func newItem(model IModel, tmpl interface{}) (IItem, error) {
 
 			//see if field is part of uniq sets
 			itemField.UniqSets = strings.Split(f.Tag.Get("uniq"), ",")
+			log.Debugf("%s.uniqSets(%s -> %+v)", im.name, f.Tag.Get("uniq"), itemField.UniqSets
 		}
 		im.fields = append(im.fields, itemField)
 	}

@@ -28,6 +28,10 @@ const modelNamePattern = `[a-z]([a-z0-9_]*[a-z0-9])*`
 
 var modelNameRegex = regexp.MustCompile("^" + modelNamePattern + "$")
 
+const uniqTagNamePattern = `[a-z][a-zA-Z0-9]*`
+
+var uniqTagNameRegex = regexp.MustCompile("^" + uniqTagNamePattern + "$")
+
 //created item inside a model
 //param tmpl is a struct with:
 //	first field: anonymous model.Item
@@ -106,8 +110,8 @@ func newItem(model IModel, tmpl interface{}) (IItem, error) {
 			}
 
 			//see if field is part of uniq sets
-			itemField.UniqSets = strings.Split(f.Tag.Get("uniq"), ",")
-			log.Debugf("%s.uniqSets(%s -> %+v)", im.name, f.Tag.Get("uniq"), itemField.UniqSets
+			itemField.UniqSets = uniqSets(f.Tag.Get("uniq"))
+			log.Debugf("%s.uniqSets(%s -> %+v)", im.name, f.Tag.Get("uniq"), itemField.UniqSets)
 		}
 		im.fields = append(im.fields, itemField)
 	}
@@ -227,4 +231,23 @@ func isModelStructType(t reflect.Type) bool {
 		return true
 	}
 	return false
+}
+
+func uniqSets(uniqTag string) []string {
+	uniqSets := []string{}
+	names := strings.Split(uniqTag, ",")
+	for _, name := range names {
+		name = strings.Trim(name, " ")
+		if name == "" {
+			continue
+		}
+		if !uniqTagNameRegex.MatchString(name) {
+			panic(fmt.Errorf("invalid tag uniq:\"%s\"", uniqTag))
+		}
+		uniqSets = append(uniqSets, name)
+	}
+	if len(uniqSets) > 0 {
+		return uniqSets
+	}
+	return nil
 }
